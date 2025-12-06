@@ -1,0 +1,7 @@
+{
+  "version": "INVALID",
+  "name": "invalid-prompt",
+  "model": "gpt-4o",
+  "schema": "test",
+  "systemMessage": "Invalid version format"
+}

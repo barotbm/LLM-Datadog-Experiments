@@ -1,0 +1,15 @@
+{
+  "version": "1.5.0",
+  "name": "test-prompt",
+  "model": "gpt-4o-mini",
+  "schema": "test",
+  "systemMessage": "This is version 1.5.0 of the test prompt",
+  "instructions": [
+    "Updated instruction"
+  ],
+  "metadata": {
+    "test": "updated"
+  },
+  "temperature": 0.3,
+  "maxTokens": 150
+}

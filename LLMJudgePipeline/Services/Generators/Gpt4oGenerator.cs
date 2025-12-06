@@ -2,6 +2,9 @@ using Azure;
 using Azure.AI.OpenAI;
 using LLMJudgePipeline.Interfaces;
 using LLMJudgePipeline.Models;
+using LLMJudgePipeline.Prompts.Models;
+using LLMJudgePipeline.Prompts.Registry;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using System.Diagnostics;
 
@@ -11,31 +14,20 @@ public class Gpt4oGenerator : ILlmGenerator
 {
     private readonly OpenAIClient _openAiClient;
     private readonly ILogger<Gpt4oGenerator> _logger;
-    private const string DefaultSystemPrompt = @"You are an intent classification system for a loan servicing platform.
-Analyze the user's message and return a JSON response with the following structure:
-{
-  ""intent"": ""<intent_name>"",
-  ""confidence"": <0.0-1.0>,
-  ""entities"": {
-    ""key"": ""value""
-  }
-}
+    private readonly IPromptRegistry _promptRegistry;
+    private readonly PromptVersionConfiguration _promptConfig;
+    private PromptDefinition? _cachedPrompt;
 
-Valid intents:
-- PayoffQuote: User wants a loan payoff amount
-- Payment: User wants to make a payment
-- AddressChange: User wants to update their address
-- BalanceInquiry: User asks about their balance
-- RateInformation: User asks about interest rates
-- GeneralInquiry: General questions
-- Other: Anything else
-
-Extract relevant entities like amounts, dates, addresses, etc.";
-
-    public Gpt4oGenerator(OpenAIClient openAiClient, ILogger<Gpt4oGenerator> logger)
+    public Gpt4oGenerator(
+        OpenAIClient openAiClient, 
+        ILogger<Gpt4oGenerator> logger,
+        IPromptRegistry promptRegistry,
+        IOptions<PromptVersionConfiguration> promptConfig)
     {
         _openAiClient = openAiClient;
         _logger = logger;
+        _promptRegistry = promptRegistry;
+        _promptConfig = promptConfig.Value;
     }
 
     public async Task<GeneratorResult> GenerateAsync(string userMessage, string? systemPrompt = null)
@@ -44,16 +36,20 @@ Extract relevant entities like amounts, dates, addresses, etc.";
         
         try
         {
+            // Load prompt from registry if not using custom prompt
+            var prompt = systemPrompt == null ? GetPrompt() : null;
+            var finalSystemMessage = systemPrompt ?? prompt?.SystemMessage ?? throw new InvalidOperationException("No system prompt available");
+            
             var chatCompletionsOptions = new ChatCompletionsOptions
             {
-                DeploymentName = "gpt-4o",
+                DeploymentName = prompt?.Model ?? "gpt-4o",
                 Messages =
                 {
-                    new ChatRequestSystemMessage(systemPrompt ?? DefaultSystemPrompt),
+                    new ChatRequestSystemMessage(finalSystemMessage),
                     new ChatRequestUserMessage(userMessage)
                 },
-                Temperature = 0.3f,
-                MaxTokens = 500,
+                Temperature = prompt?.Temperature ?? 0.3f,
+                MaxTokens = prompt?.MaxTokens ?? 500,
                 ResponseFormat = ChatCompletionsResponseFormat.JsonObject
             };
 
@@ -77,8 +73,8 @@ Extract relevant entities like amounts, dates, addresses, etc.";
                 LatencyMs = sw.ElapsedMilliseconds
             };
 
-            _logger.LogInformation("Generator completed: Intent={Intent}, Confidence={Confidence}, Latency={Latency}ms",
-                result.Intent, result.Confidence, result.LatencyMs);
+            _logger.LogInformation("Generator completed: Intent={Intent}, Confidence={Confidence}, Latency={Latency}ms, PromptVersion={PromptVersion}",
+                result.Intent, result.Confidence, result.LatencyMs, prompt?.Version ?? "custom");
 
             return result;
         }
@@ -95,6 +91,17 @@ Extract relevant entities like amounts, dates, addresses, etc.";
                 LatencyMs = sw.ElapsedMilliseconds
             };
         }
+    }
+
+    private PromptDefinition GetPrompt()
+    {
+        if (_cachedPrompt == null)
+        {
+            _cachedPrompt = _promptRegistry.Load("classify", _promptConfig.IntentClassifier);
+            _logger.LogInformation("Loaded intent classifier prompt: version={Version}, model={Model}",
+                _cachedPrompt.Version, _cachedPrompt.Model);
+        }
+        return _cachedPrompt;
     }
 
     private class GeneratorJsonSchema

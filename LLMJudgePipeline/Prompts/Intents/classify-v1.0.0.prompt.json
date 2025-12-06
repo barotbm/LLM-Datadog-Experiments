@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "name": "classify",
+  "model": "gpt-4o",
+  "schema": "intent-classifier",
+  "systemMessage": "You are an intent classification system for a loan servicing platform. Analyze the user's message and return a JSON response with the predicted intent, confidence score, and extracted entities.",
+  "instructions": [
+    "Analyze the user's input carefully to determine their primary intent",
+    "Consider context clues and keywords to improve classification accuracy",
+    "Extract relevant entities such as amounts, dates, account numbers, and addresses",
+    "Return confidence scores between 0.0 and 1.0 based on classification certainty",
+    "If the intent is ambiguous, classify as 'GeneralInquiry' with lower confidence",
+    "Always return valid JSON matching the specified schema"
+  ],
+  "enumIntents": [
+    "PayoffQuote",
+    "Payment",
+    "AddressChange",
+    "BalanceInquiry",
+    "RateInformation",
+    "GeneralInquiry",
+    "Other"
+  ],
+  "temperature": 0.3,
+  "maxTokens": 500,
+  "examples": [
+    {
+      "input": "I want to know my payoff amount",
+      "output": "{\"intent\": \"PayoffQuote\", \"confidence\": 0.95, \"entities\": {}}",
+      "explanation": "Clear request for payoff information"
+    },
+    {
+      "input": "I need to make a payment of $500",
+      "output": "{\"intent\": \"Payment\", \"confidence\": 0.92, \"entities\": {\"amount\": \"500\"}}",
+      "explanation": "Payment intent with extracted amount"
+    },
+    {
+      "input": "What's my current balance?",
+      "output": "{\"intent\": \"BalanceInquiry\", \"confidence\": 0.90, \"entities\": {}}",
+      "explanation": "Balance inquiry intent"
+    }
+  ],
+  "metadata": {
+    "responseFormat": "json_object",
+    "outputSchema": {
+      "intent": "string (from enumIntents)",
+      "confidence": "number (0.0-1.0)",
+      "entities": "object (key-value pairs)"
+    },
+    "domain": "loan-servicing",
+    "use_case": "customer_intent_classification"
+  },
+  "createdDate": "2024-12-05T00:00:00Z",
+  "author": "LLM Engineering Team",
+  "changelog": "Initial version with core loan servicing intents"
+}

@@ -1,0 +1,16 @@
+{
+  "version": "1.0.0",
+  "name": "test-prompt",
+  "model": "gpt-4o",
+  "schema": "test",
+  "systemMessage": "This is a test prompt for unit testing",
+  "instructions": [
+    "Instruction 1",
+    "Instruction 2"
+  ],
+  "metadata": {
+    "test": "value"
+  },
+  "temperature": 0.5,
+  "maxTokens": 100
+}

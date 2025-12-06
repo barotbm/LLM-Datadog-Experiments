@@ -1,6 +1,7 @@
 using Azure.AI.OpenAI;
 using LLMJudgePipeline.Infrastructure;
 using LLMJudgePipeline.Interfaces;
+using LLMJudgePipeline.Prompts.Extensions;
 using LLMJudgePipeline.Services;
 using LLMJudgePipeline.Services.Drift;
 using LLMJudgePipeline.Services.Embedding;
@@ -55,6 +56,9 @@ DogStatsd.Configure(dogstatsdConfig);
 builder.Services.AddSingleton<IDatadogMetrics, DatadogMetricsService>();
 builder.Services.AddSingleton<IDatadogExperiments, DatadogExperimentsService>();
 
+// Register Prompt Registry and versioning system
+builder.Services.AddPromptRegistry(builder.Configuration);
+
 // Register Generator
 builder.Services.AddScoped<ILlmGenerator, Gpt4oGenerator>();
 
@@ -88,6 +92,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
+
+// Warmup prompt cache
+app.WarmupPromptCache();
 
 Log.Information("LLM Judge Pipeline API starting up...");
 
